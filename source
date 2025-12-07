@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>For You — Surprise Gallery</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:#0f1724;
+      --accent:#ff4d6d;
+      --soft:#a0b9ff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:radial-gradient(circle at 10% 10%, rgba(255,77,109,0.06), transparent 5%), radial-gradient(circle at 90% 90%, rgba(160,185,255,0.03), transparent 30%), var(--bg);color:#e6eef8}
+    .wrap{max-width:1100px;margin:28px auto;padding:24px}
+
+    header{display:flex;align-items:center;gap:16px}
+    h1{margin:0;font-size:1.6rem;letter-spacing:0.6px}
+    p.lead{margin:0;color:#c6d6ff88}
+
+    /* top controls */
+    .controls{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+    .btn{background:linear-gradient(180deg,#162034,#0b1424);border:1px solid rgba(255,255,255,0.04);padding:10px 14px;border-radius:12px;color:#dfe9ff;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+    .btn.secondary{background:transparent;border:1px dashed rgba(255,255,255,0.04)}
+
+    /* dropdown settings */
+    .dropdown{position:relative}
+    .dropdown-panel{position:absolute;right:0;top:calc(100% + 10px);background:linear-gradient(180deg,#081025,#0b1426);border-radius:12px;padding:12px;width:260px;box-shadow:0 12px 40px rgba(2,6,23,0.7);transform-origin:top right;transform:scale(0.92);opacity:0;pointer-events:none;transition:all 220ms cubic-bezier(.2,.9,.3,1)}
+    .dropdown.open .dropdown-panel{transform:scale(1);opacity:1;pointer-events:auto}
+    .dropdown-panel label{display:block;font-size:13px;color:#bcd3ff;margin-bottom:6px}
+    .dropdown-panel input[type=range]{width:100%}
+
+    /* gallery area */
+    .gallery-wrap{margin-top:20px;display:flex;gap:18px}
+    .left{flex:1}
+    .right{width:340px}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:6px;border-radius:14px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    .card img{display:block;width:100%;height:150px;object-fit:cover;border-radius:10px;transform:translateZ(0)}
+
+    /* floating / glow effect */
+    .float{animation:floatY 6s ease-in-out infinite}
+    @keyframes floatY{0%{transform:translateY(0)}50%{transform:translateY(-12px)}100%{transform:translateY(0)}}
+    .glow{box-shadow:0 8px 30px rgba(255,77,109,0.12), 0 0 40px rgba(160,185,255,0.03) inset}
+
+    /* image overlay controls */
+    .card .actions{position:absolute;top:8px;right:8px;display:flex;gap:8px}
+    .icon-btn{background:linear-gradient(180deg,#ffffff08,#00000012);border-radius:8px;padding:6px;border:0;color:#fff;cursor:pointer;font-size:13px}
+
+    /* modal viewer */
+    .modal{position:fixed;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.8), rgba(2,6,23,0.95));display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity 220ms}
+    .modal.open{opacity:1;pointer-events:auto}
+    .modal .view{max-width:980px;width:100%;max-height:86vh;display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .view .big{background:#0a0f1a;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .view img{max-width:100%;max-height:86vh;object-fit:contain;border-radius:8px}
+    .sidebar{background:linear-gradient(180deg,#071126,#071223);padding:12px;border-radius:12px;color:#bcd3ff}
+
+    /* slideshow controls */
+    .navs{display:flex;gap:8px;justify-content:center;margin-top:10px}
+    .circle{width:38px;height:38px;border-radius:50%;display:inline-grid;place-items:center;background:#071126;border:1px solid rgba(255,255,255,0.03)}
+
+    /* list all / compact toggle */
+    .toolbar{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+
+    /* nice transitions */
+    .fade{transition:all 240ms cubic-bezier(.2,.9,.3,1)}
+
+    /* heart backdrop */
+    .hearts{position:fixed;left:0;right:0;top:0;bottom:0;pointer-events:none;mix-blend-mode:screen}
+    .heart{position:absolute;width:220px;height:220px;background:radial-gradient(circle at 30% 30%, rgba(255,77,109,0.22), rgba(255,77,109,0.08));filter:blur(40px);opacity:0.7;border-radius:40%}
+
+    footer{margin-top:18px;color:#9fb0ff66;font-size:13px}
+
+    /* responsive */
+    @media (max-width:880px){.view{grid-template-columns:1fr}.right{display:none}.gallery-wrap{flex-direction:column}.grid .card img{height:120px}}
+  </style>
+</head>
+<body>
+  <div class="hearts" aria-hidden>
+    <div class="heart" style="left:6%;top:10%;width:260px;height:260px;"></div>
+    <div class="heart" style="right:8%;bottom:8%;width:420px;height:420px;opacity:0.45"></div>
+    <div class="heart" style="left:40%;top:55%;width:220px;height:220px;opacity:0.4"></div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(180deg,var(--accent),#7c52ff);display:grid;place-items:center;font-weight:700;font-size:20px">❤</div>
+      <div>
+        <h1>For You — Our Memories</h1>
+        <p class="lead">A tiny surprise page with floating glowing photos, transitions & music. Copy-paste this file and open in the browser.</p>
+      </div>
+    </header>
+
+    <div class="controls">
+      <label class="btn" for="fileInput">➕ Add photos
+        <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
+      </label>
+
+      <label class="btn secondary" id="addMusicBtn">♪ Add music
+        <input id="musicInput" type="file" accept="audio/*" style="display:none">
+      </label>
+
+      <button class="btn" id="viewAllBtn">🖼️ Show all</button>
+
+      <div class="dropdown" id="settings">
+        <button class="btn secondary" id="openSettings">⚙️ Settings ▾</button>
+        <div class="dropdown-panel fade" aria-hidden="true">
+          <label>Glowing intensity: <span id="gval">0.12</span></label>
+          <input id="glowRange" type="range" min="0" max="0.6" step="0.02" value="0.12">
+          <label style="margin-top:10px">Float speed (s): <span id="fval">6</span></label>
+          <input id="floatRange" type="range" min="2" max="12" step="0.5" value="6">
+          <div style="margin-top:10px;font-size:13px;color:#90a8ff88">Tip: Use the "Show all" button to toggle grid/big viewer.</div>
+        </div>
+      </div>
+
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="btn" id="clearBtn">🗑️ Clear all</button>
+      </div>
+    </div>
+
+    <div class="gallery-wrap">
+      <div class="left">
+        <div class="toolbar">
+          <div style="font-size:13px;color:#bcd3ff">Saved photos: <strong id="count">0</strong></div>
+          <div style="margin-left:auto;color:#9fb0ff88;font-size:13px">Tip: Photos are saved locally on this browser (localStorage).</div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+      </div>
+
+      <aside class="right">
+        <div class="card" style="padding:12px;margin-bottom:12px">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="width:64px;height:64px;border-radius:12px;background:#071126;display:grid;place-items:center">♪</div>
+            <div>
+              <div style="font-weight:700">Music</div>
+              <div id="musicName" style="font-size:13px;color:#9fb0ff88">No music loaded</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button class="btn" id="playBtn">Play</button>
+            <button class="btn secondary" id="stopBtn">Stop</button>
+            <label style="margin-left:auto;font-size:13px;color:#9fb0ff88">Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.28"></label>
+          </div>
+        </div>
+
+        <div class="card" style="padding:12px">
+          <div style="font-weight:700;margin-bottom:8px">How to use</div>
+          <ol style="margin:0;padding-left:18px;color:#9fb0ffcc;font-size:13px">
+            <li>Click "Add photos" and select images.</li>
+            <li>Click any photo to open viewer; use remove to delete.</li>
+            <li>Add music via "Add music" (playback needs user gesture).</li>
+            <li>Photos & music are stored only in this browser on this device.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+
+    <footer>Made with ♥ — open this file locally and surprise your girlfriend. For hosting, upload to GitHub Pages or any static host.</footer>
+  </div>
+
+  <!-- modal viewer -->
+  <div class="modal" id="modal">
+    <div class="view fade">
+      <div class="big" id="bigBox"><img alt="current" id="bigImg"></div>
+      <div class="sidebar">
+        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+          <div>
+            <div id="meta" style="font-weight:700">Photo</div>
+            <div id="metaCount" style="font-size:13px;color:#9fb0ff88">0 / 0</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="icon-btn" id="prevBtn">◀</button>
+            <button class="icon-btn" id="nextBtn">▶</button>
+            <button class="icon-btn" id="deleteBtn">🗑</button>
+            <button class="icon-btn" id="closeModal">✕</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="font-size:13px;color:#bcd3ff;margin-bottom:8px">All photos</div>
+          <div id="thumbs" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audio" loop></audio>
+
+  <script>
+    // small helper - localStorage gallery
+    const LS_KEY = 'surprise_gallery_imgs_v1';
+    const LS_MUSIC = 'surprise_gallery_music_v1';
+
+    const fileInput = document.getElementById('fileInput');
+    const grid = document.getElementById('grid');
+    const count = document.getElementById('count');
+    const modal = document.getElementById('modal');
+    const bigImg = document.getElementById('bigImg');
+    const thumbs = document.getElementById('thumbs');
+    const metaCount = document.getElementById('metaCount');
+    const musicInput = document.getElementById('musicInput');
+    const audioEl = document.getElementById('audio');
+    const musicName = document.getElementById('musicName');
+
+    let imgs = loadImages();
+    let currentIndex = 0;
+
+    function loadImages(){
+      try{ const raw = localStorage.getItem(LS_KEY); if(!raw) return []; return JSON.parse(raw) }catch(e){return []}
+    }
+    function saveImages(){ localStorage.setItem(LS_KEY, JSON.stringify(imgs)); renderGrid(); }
+
+    function renderGrid(){
+      grid.innerHTML='';
+      imgs.forEach((data, i)=>{
+        const c=document.createElement('div'); c.className='card float glow';
+        const img=document.createElement('img'); img.src=data; img.alt='memory-'+i;
+        img.loading='lazy';
+        img.addEventListener('click', ()=>openModal(i));
+        const actions=document.createElement('div'); actions.className='actions';
+        const del=document.createElement('button'); del.className='icon-btn'; del.textContent='🗑'; del.title='Remove'; del.addEventListener('click', (ev)=>{ev.stopPropagation(); if(confirm('Delete this photo?')){ imgs.splice(i,1); saveImages(); }});
+        actions.appendChild(del);
+        c.appendChild(img); c.appendChild(actions); grid.appendChild(c);
+      });
+      count.textContent = imgs.length;
+    }
+
+    fileInput.addEventListener('change', async (e)=>{
+      const files = Array.from(e.target.files || []);
+      if(!files.length) return;
+      for(const f of files){
+        if(!f.type.startsWith('image/')) continue;
+        const b = await readAsDataURL(f);
+        imgs.push(b);
+      }
+      saveImages();
+      fileInput.value='';
+    });
+
+    function readAsDataURL(file){ return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);}) }
+
+    // modal viewer
+    function openModal(i){ currentIndex = i; showCurrent(); modal.classList.add('open'); document.body.style.overflow='hidden' }
+    function closeModal(){ modal.classList.remove('open'); document.body.style.overflow='' }
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('prevBtn').addEventListener('click', ()=>{ if(imgs.length==0) return; currentIndex = (currentIndex-1+imgs.length)%imgs.length; showCurrent();});
+    document.getElementById('nextBtn').addEventListener('click', ()=>{ if(imgs.length==0) return; currentIndex = (currentIndex+1)%imgs.length; showCurrent();});
+
+    function showCurrent(){ if(imgs.length==0){ bigImg.src=''; metaCount.textContent='0 / 0'; thumbs.innerHTML=''; return; } bigImg.style.opacity=0; setTimeout(()=>{ bigImg.src = imgs[currentIndex]; bigImg.style.opacity=1 },120);
+      metaCount.textContent = (currentIndex+1) + ' / ' + imgs.length; renderThumbs(); }
+
+    function renderThumbs(){ thumbs.innerHTML=''; imgs.forEach((d,i)=>{ const im=document.createElement('img'); im.src=d; im.style.width='100%'; im.style.height='64px'; im.style.objectFit='cover'; im.style.borderRadius='6px'; im.style.cursor='pointer'; im.addEventListener('click', ()=>{currentIndex = i; showCurrent();}); thumbs.appendChild(im); }); }
+
+    document.getElementById('deleteBtn').addEventListener('click', ()=>{ if(!confirm('Delete current photo?')) return; imgs.splice(currentIndex,1); if(currentIndex>=imgs.length) currentIndex = Math.max(0, imgs.length-1); saveImages(); showCurrent(); if(imgs.length==0) closeModal(); });
+
+    // settings dropdown
+    const settings = document.getElementById('settings');
+    const openSettings = document.getElementById('openSettings');
+    openSettings.addEventListener('click', ()=>{ settings.classList.toggle('open'); });
+
+    // glow slider
+    const glowRange = document.getElementById('glowRange'); const gval = document.getElementById('gval');
+    glowRange.addEventListener('input', ()=>{ gval.textContent = glowRange.value; document.querySelectorAll('.glow').forEach(el=>{ el.style.boxShadow = `0 8px 30px rgba(255,77,109,${glowRange.value}), 0 0 40px rgba(160,185,255,0.03) inset` }) });
+
+    const floatRange = document.getElementById('floatRange'); const fval = document.getElementById('fval');
+    floatRange.addEventListener('input', ()=>{ fval.textContent = floatRange.value; document.querySelectorAll('.float').forEach(el=>{ el.style.animationDuration = floatRange.value + 's' }) });
+
+    // show all toggle (grid is default; open first big?)
+    const viewAllBtn = document.getElementById('viewAllBtn');
+    viewAllBtn.addEventListener('click', ()=>{
+      // quick fun: shuffle float intensity and scale
+      document.querySelectorAll('.card').forEach((c,i)=>{ c.style.transform = `translateY(${(i%3)*-6}px) rotate(${(i%2?'+':'-')}${i%6}deg)` });
+      viewAllBtn.animate([{transform:'scale(1)'} , {transform:'scale(0.98)'} , {transform:'scale(1)'}], {duration:280})
+    });
+
+    // clear all
+    document.getElementById('clearBtn').addEventListener('click', ()=>{ if(!confirm('Remove all saved photos?')) return; imgs = []; saveImages(); });
+
+    // music handling
+    musicInput.addEventListener('change', async (e)=>{
+      const f = e.target.files[0]; if(!f) return; const b = await readAsDataURL(f); localStorage.setItem(LS_MUSIC, b); localStorage.setItem(LS_MUSIC+'_name', f.name); loadMusic(); musicInput.value='';
+    });
+
+    function loadMusic(){ const m = localStorage.getItem(LS_MUSIC); if(m){ audioEl.src = m; musicName.textContent = localStorage.getItem(LS_MUSIC+'_name') || 'Your music'; } else { audioEl.src=''; musicName.textContent='No music loaded'; } }
+    loadMusic();
+
+    document.getElementById('playBtn').addEventListener('click', ()=>{ if(!audioEl.src) return alert('No music loaded. Use "Add music" to upload an audio file.'); audioEl.play(); });
+    document.getElementById('stopBtn').addEventListener('click', ()=>{ audioEl.pause(); audioEl.currentTime = 0; });
+    document.getElementById('vol').addEventListener('input', (e)=>{ audioEl.volume = e.target.value; });
+
+    // init
+    renderGrid();
+
+    // small accessibility: close modal on click outside or Esc
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); if(e.key==='ArrowRight') document.getElementById('nextBtn').click(); if(e.key==='ArrowLeft') document.getElementById('prevBtn').click(); });
+
+    // make sure glow/float values apply on load
+    document.querySelectorAll('.glow').forEach(el=>{ el.style.boxShadow = `0 8px 30px rgba(255,77,109,${glowRange.value}), 0 0 40px rgba(160,185,255,0.03) inset` })
+    document.querySelectorAll('.float').forEach(el=>{ el.style.animationDuration = floatRange.value + 's' })
+
+    // small localStorage helper to import/base64 images via URL (optional) - left for experiments
+  </script>
+</body>
+</html>
